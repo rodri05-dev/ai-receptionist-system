@@ -3,8 +3,9 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 module.exports = async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  if (token !== process.env.DASHBOARD_ACCESS_TOKEN) return res.status(401).json({ error: 'unauthorized' });
-
+   if (!process.env.DASHBOARD_ACCESS_TOKEN || token !== process.env.DASHBOARD_ACCESS_TOKEN) {
+  return res.status(401).json({ error: 'unauthorized' });
+}
   const [{ data: missedCalls }, { data: conversations }, { data: pipeline }, { data: activity }] = await Promise.all([
     supabase.from('missed_calls').select('*, contacts(full_name)').order('created_at', { ascending: false }).limit(15),
     supabase.from('conversations').select('id, channel, intent, status, updated_at, contacts(full_name, phone, email)').order('updated_at', { ascending: false }).limit(15),
