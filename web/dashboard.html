@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receptionist Dashboard</title>
+<style>
+  :root{ --ink:#152238; --paper:#f6f4ef; --line:#e2ddd0; --amber:#b3782c; --ok:#3c6e47; --urgent:#a02c2c;}
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--paper); color:var(--ink);}
+  header{padding:24px 32px; border-bottom:1px solid var(--line);}
+  header h1{margin:0; font-size:1.3rem;}
+  #gate{max-width:340px; margin:120px auto; text-align:center;}
+  #gate input{width:100%; padding:10px; margin:12px 0; border:1px solid var(--line);}
+  #gate button{padding:10px 18px; background:var(--ink); color:#fff; border:none; cursor:pointer;}
+  main{display:none; padding:24px 32px; max-width:1200px; margin:0 auto;}
+  main.visible{display:block;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:20px;}
+  .card{background:#fff; border:1px solid var(--line); border-radius:6px; padding:18px;}
+  .card h2{font-size:0.95rem; margin:0 0 12px; color:#4b5568;}
+  .row{padding:10px 0; border-bottom:1px solid var(--line); font-size:0.88rem;}
+  .row:last-child{border-bottom:none;}
+  .tag{display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.72rem; margin-left:6px;}
+  .tag.urgent{background:#fbe4e4; color:var(--urgent);}
+  .tag.warn{background:#fbeecd; color:var(--amber);}
+  .tag.ok{background:#e1efe4; color:var(--ok);}
+  .score{font-weight:bold;}
+</style>
+</head>
+<body>
+<div id="gate">
+  <h1>Receptionist Dashboard</h1>
+  <input id="tokenInput" type="password" placeholder="Access token">
+  <button onclick="unlock()">Enter</button>
+</div>
+<header style="display:none" id="mainHeader"><h1>Today's activity</h1></header>
+<main id="main">
+  <div class="grid">
+    <div class="card"><h2>Missed calls</h2><div id="missedList"></div></div>
+    <div class="card"><h2>Active conversations</h2><div id="convoList"></div></div>
+    <div class="card"><h2>Pipeline</h2><div id="pipelineList"></div></div>
+    <div class="card"><h2>Recent activity</h2><div id="activityList"></div></div>
+  </div>
+</main>
+<script>
+function unlock() {
+  localStorage.setItem('dashboardToken', document.getElementById('tokenInput').value);
+  load();
+}
+const CHANNEL = { chat: '💬 chat', voice_web: '🎙 web voice', phone: '📞 phone', sms: '✉️ sms' };
+
+async function load() {
+  const token = localStorage.getItem('dashboardToken');
+  if (!token) return;
+  const res = await fetch('/api/dashboard-data', { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) { alert('Wrong token'); localStorage.removeItem('dashboardToken'); return; }
+  const data = await res.json();
+
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('mainHeader').style.display = 'block';
+  document.getElementById('main').classList.add('visible');
+
+  document.getElementById('missedList').innerHTML = (data.missedCalls || []).map(m => `
+    <div class="row">${m.contacts?.full_name || m.caller_phone}
+      <span class="tag ${m.alerted ? 'ok' : 'warn'}">${m.alerted ? 'followed up' : 'texted'}</span>
+      <div style="color:#6b7688;font-size:.78rem;margin-top:2px;">${new Date(m.created_at).toLocaleString()}</div></div>`
+  ).join('') || '<div class="row">No missed calls yet.</div>';
+
+  document.getElementById('convoList').innerHTML = (data.conversations || []).map(c => `
+    <div class="row">${CHANNEL[c.channel] || c.channel} — ${c.contacts?.full_name || c.contacts?.phone || 'unidentified'}
+      <span class="tag ${c.status === 'closed' ? 'ok' : 'warn'}">${c.intent || 'general'}</span></div>`
+  ).join('') || '<div class="row">No conversations yet.</div>';
+
+  document.getElementById('pipelineList').innerHTML = (data.pipeline || []).map(p => `
+    <div class="row">${p.full_name || p.phone || p.email || '(no name)'} — ${p.service_interest || ''}
+      <span class="score">${p.qualification_score ?? 0}</span>
+      <span class="tag ${p.status === 'new' ? 'warn' : 'ok'}">${p.status}</span></div>`
+  ).join('') || '<div class="row">No leads yet.</div>';
+
+  document.getElementById('activityList').innerHTML = (data.activity || []).map(a => `
+    <div class="row">${a.activity_type.replace('_',' ')} — ${a.contacts?.full_name || ''}
+      <div style="color:#6b7688;font-size:.78rem;margin-top:2px;">${new Date(a.created_at).toLocaleString()}</div></div>`
+  ).join('') || '<div class="row">Nothing yet.</div>';
+}
+if (localStorage.getItem('dashboardToken')) load();
+</script>
+</body>
+</html>
