@@ -2,9 +2,9 @@ const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 module.exports = async (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-   if (!process.env.DASHBOARD_ACCESS_TOKEN || token !== process.env.DASHBOARD_ACCESS_TOKEN) {
-  return res.status(401).json({ error: 'unauthorized' });
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+const expected = process.env.DASHBOARD_ACCESS_TOKEN;
+if (!expected || expected.length < 16 || token !== expected) return res.status(401).json({ error: 'unauthorized' });
 }
   const [{ data: missedCalls }, { data: conversations }, { data: pipeline }, { data: activity }] = await Promise.all([
     supabase.from('missed_calls').select('*, contacts(full_name)').order('created_at', { ascending: false }).limit(15),
@@ -14,4 +14,4 @@ module.exports = async (req, res) => {
   ]);
 
   res.status(200).json({ missedCalls, conversations, pipeline, activity });
-};
+  
