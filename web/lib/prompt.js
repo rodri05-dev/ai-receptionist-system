@@ -31,7 +31,7 @@ Respond ONLY with a JSON object of this exact shape, and nothing else:
 }
 
 Set "ready_to_act": true only once you genuinely have enough:
-- booking: attendeeName AND attendeeEmail AND chosenStartTimeIso (an exact ISO time from the real slots list, if one was given to you)
+- booking: attendeeName AND attendeeEmail AND a time. If a list of real open slots was given to you, the time must be one of them, with its exact ISO string in chosenStartTimeIso. If NO list was given, accept the time in the caller's own words, put it in collected_data.preferredTimes, set ready_to_act to true, and NEVER ask the caller for a date format or ISO time.
 - new_lead: a way to reach them (phone or email) AND serviceInterest
 Otherwise keep it false and ask for what's missing.`;
 }
