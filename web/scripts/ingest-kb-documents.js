@@ -18,7 +18,9 @@ function chunkText(text, maxChars = 900, overlap = 150) {
 }
 
 async function ingest(filePath, { title, sourceType }) {
-  const parsed = await pdfParse(fs.readFileSync(filePath));
+  const parsed = filePath.toLowerCase().endsWith('.txt')
+  ? { text: fs.readFileSync(filePath, 'utf8') }
+  : await pdfParse(fs.readFileSync(filePath));
   const chunks = chunkText(parsed.text);
   if (!chunks.length) throw new Error('No extractable text — this PDF is probably a scan, not real text.');
 
